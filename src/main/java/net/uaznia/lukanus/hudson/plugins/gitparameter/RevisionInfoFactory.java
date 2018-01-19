@@ -17,7 +17,7 @@ import java.util.regex.Pattern;
 public class RevisionInfoFactory {
 
     private static final Logger LOGGER = Logger.getLogger(RevisionInfoFactory.class.getName());
-    public static final Pattern AUTHOR_LINE_PATTERN = Pattern.compile("author (.* <.*@.*>) (\\d{10}) ([\\+-]\\d{4})");
+    public static final Pattern AUTHOR_LINE_PATTERN = Pattern.compile("author ([^ ]*) <.*@.*> (\\d{10}) ([\\+-]\\d{4})");
 
     private GitClient gitClient;
     private String branch;
@@ -63,7 +63,8 @@ public class RevisionInfoFactory {
             String author = matcher.group(1);
             String timestamp = matcher.group(2);
             DateTime date = new DateTime(Long.parseLong(timestamp) * 1000); //Convert UNIX timestamp to date
-            return revision.getSha1String().substring(0, 8) + " " + date.toString("yyyy:MM:dd HH:mm") + " " + author;
+            String msg = getMessage(raw);
+            return revision.getSha1String().substring(0, 8) + " " + date.toString("yyyy-MM-dd-HH:mm") + " " + author + msg;
         } else {
             LOGGER.log(Level.WARNING, Messages.GitParameterDefinition_notFindAuthorPattern(authorLine));
             return "";
@@ -73,6 +74,19 @@ public class RevisionInfoFactory {
     private String getAuthorLine(List<String> rows) {
         for (String row : rows) {
             if (StringUtils.isNotEmpty(row) && row.toLowerCase().startsWith("author")) {
+                return row;
+            }
+        }
+        return "";
+    }
+
+    private String getMessage(List<String> rows) {
+        for (String row: rows) {
+            if (row.startsWith(" ")) {
+                row = row.replaceAll("\\s+", " ");
+                if (row.length() >= 60) {
+                    row = row.substring(0, 60) + "...";
+                }
                 return row;
             }
         }
